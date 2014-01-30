@@ -5,7 +5,7 @@
 	 * window.force.modules.helpers.randomInt()
 	 */
 	mod.randomInt = function (min, max) {
-	    return Math.floor(Math.random() * (max - min + 1) + min);
+		return Math.floor(Math.random() * (max - min + 1) + min);
 	};
 
 
@@ -108,6 +108,26 @@
 		return url;
 	}
 
+	/**
+	 * window.force.modules.helpers.alert()
+	 *
+	 * multi environment alert
+	 */
+	mod.alert = function(title, message, btnTxt, cb) {
+		if (message === undefined && btnTxt === undefined && cb === undefined) {
+			message = title;
+			title = null;
+		}
+		
+		if (force.modules.environment.isEjecta()) {
+			window.ejecta.Force.alert(title, message, btnTxt, cb);
+		} else {
+			window.alert(message);
+			if (cb) {
+				cb();
+			}
+		}
+	};
 
 	/**
 	 * window.force.modules.helpers.prompt()
@@ -137,6 +157,12 @@
 			CocoonJS.App.onTextDialogCancelled.addEventListener(cancelCb);
 			
 			CocoonJS.App.showTextDialog(title, message, defaultText, CocoonJS.App.KeyboardType[keyboardType], cancelButtonText, okButtonText);
+		} else if (force.modules.environment.isEjecta()) {
+			if (window.ejecta.Force && window.ejecta.Force.getText) {
+				window.ejecta.Force.getText(title, message, defaultText, keyboardType, okButtonText, cancelButtonText, cb);
+			} else {
+				window.ejecta.getText(title, message, cb);
+			}
 		} else {
 			var result = window.prompt(message, defaultText);
 			return cb(result);
@@ -175,6 +201,8 @@
 				CocoonJS.App.onMessageBoxDenied.addEventListener(cancelCb);
 				CocoonJS.App.showMessageBox(title, message, confirmButtonText, denyButtonText);
 			}
+		} else if (force.modules.environment.isEjecta()) {
+			window.ejecta.Force.confirm(title, message, confirmButtonText, denyButtonText, cb);
 		} else {
 			var result = window.confirm(message);
 			return cb(result);
@@ -327,7 +355,7 @@
 	 * window.force.modules.helpers.capitaliseFirstLetter()
 	 */
 	mod.capitaliseFirstLetter = function (str) {
-    	return str.charAt(0).toUpperCase() + str.slice(1);
+		return str.charAt(0).toUpperCase() + str.slice(1);
 	};
 
 
@@ -335,7 +363,7 @@
 	 * window.force.modules.helpers.trim()
 	 */
 	mod.trim = function (str) {
-    	return str.replace(/^\s+/g,'').replace(/\s+$/g,'');
+		return str.replace(/^\s+/g,'').replace(/\s+$/g,'');
 	};
 
 
@@ -356,6 +384,177 @@
 			return data[device];
 		}
 		return([force.modules.screen.availableWidth, force.modules.screen.availableHeight]);
+	};
+
+
+	/**
+	 * window.force.modules.helpers.sequenceExecute()
+	 *   first argument: an option object:
+	 *     delay           [ms]
+	 *     context         [object]
+	 *     firstFnArg      [array of parmaters for the first function]
+	 *     zeroDelayIsSync [bool] default false, define if a delay of 0 should call the next function synchronously
+	 *   next arguments: functions to execute, each function can return an array of parameters to pass to the next function
+	 *
+	 *   example:
+	 *   sequenceExecute({delay: 1000, context: this, firstFnArg: [1, 2, 3]}, 
+	 *       function a(a, b, c) {
+	 *           console.log('a, b, c', a, b, c);
+	 *           return [10, 11, 12];
+	 *       }, 
+	 *       function a(a, b, c) {
+	 *           console.log('a, b, c', a, b, c);
+	 *       }
+	 *   );
+	 */
+	mod.sequenceExecute = function () {
+		if (arguments.length < 2) {
+			return console.warn('sequenceExecute: at least one option object and a function is required');
+		}
+		
+		var options = arguments[0] || {};
+		var currentFunction = 1;
+		var arg = arguments;
+
+		var delay = options.delay || 0;
+		var context = options.context || this;
+		var fnArg = options.firstFnArg;
+		var zeroDelayIsSync = mod.or(options.zeroDelayIsSync, false);
+		
+		var execute = function () {
+			fnArg = arg[currentFunction].apply(context, fnArg);
+			currentFunction++;
+			if (currentFunction < arg.length) {
+				if (delay === 0 && zeroDelayIsSync) {
+					return execute();
+				}
+				setTimeout(execute, delay);
+			}
+		};
+		
+		execute();
+	};
+
+
+	/**
+	 * window.force.modules.helpers.aSequenceExecute()
+	 *   first argument: an option object:
+	 *     delay           [ms]
+	 *     context         [object]
+	 *     firstFnArg      [array of parmaters for the first function]
+	 *     zeroDelayIsSync [bool] default false, define if a delay of 0 should call the next function synchronously
+	 *   next arguments: functions to execute, each function's latest argument is the callback to call to trigger next function
+	 *                   this callback can be called with a list of arguments passed to the next function
+	 *
+	 *   example:
+	 *   aSequenceExecute({delay: 1000, firstFnArg: [1, 2, 3]},
+	 *       function a(a, b, c, cb) {
+	 *           console.log('a, b, c', a, b, c);
+	 *           cb(100, 101, 102);
+	 *       }, 
+	 *       function a(a, b, c, cb) {
+	 *           console.log('a, b, c', a, b, c);
+	 *           cb();
+	 *       }
+	 *   );
+	 */
+	mod.aSequenceExecute = function () {
+		if (arguments.length < 2) {
+			return console.warn('sequenceExecute: at least one option object and a function is required');
+		}
+		
+		var options = arguments[0] || {};
+		var currentFunction = 0;
+		var arg = arguments;
+		
+		var delay = options.delay || 0;
+		var context = options.context || this;
+		var fnArg = options.firstFnArg;
+		var zeroDelayIsSync = mod.or(options.zeroDelayIsSync, false);
+		
+		var execute = function () {
+			var cbArg = [];
+			// arguments is an object, not a regular array
+			for (var i = 0; i < arguments.length; i++) {
+				cbArg.push(arguments[i]);
+			}
+			currentFunction++;
+			if (currentFunction < arg.length) {
+				cbArg.push(execute);
+				if (currentFunction === 1 || (delay === 0 && zeroDelayIsSync)) {
+					return arg[currentFunction].apply(context, cbArg);
+				}
+				setTimeout(function() {
+					arg[currentFunction].apply(context, cbArg);
+				}, delay);
+			}
+		};
+		
+		execute.apply(this, fnArg);
+	};
+
+
+	/**
+	 * window.force.modules.helpers.getDeviceUid()
+	 */
+	mod.getDeviceUid = function (str) {
+		if (force.modules.environment.isEjecta() && window.ejecta.Force.getIdentifierForVendor) {
+			return window.ejecta.Force.getIdentifierForVendor();
+		}
+		
+		// we don't have a real uid, let's try to simulate one from browser information
+		var jam = '';
+		
+		var fruits = {
+			'navigator': ['appCodeName', 'appName', 'language', 'platform', 'product', 'vendor']
+		};
+		
+		for (var k in fruits) {
+			if (window[k]) {
+				for (var i = 0, l = fruits[k].length; i < l; i++) {
+					if (window[k][fruits[k][i]]) {
+						if (jam !== '') {
+							jam += '.';
+						}
+						jam += window[k][fruits[k][i]];
+					}
+				}
+			}
+		}
+		
+		var mimeTypes = [];
+		if (navigator && navigator.mimeTypes) {
+			if (navigator.mimeTypes.length && navigator.mimeTypes.length > 0) {
+				for (var i = 0, l = navigator.mimeTypes.length; i < l; i++) {
+					if (navigator.mimeTypes[i] && navigator.mimeTypes[i].description && typeof navigator.mimeTypes[i].description === 'string') {
+						mimeTypes.push(navigator.mimeTypes[i].description);
+					}
+				}
+			}
+		}
+		if (mimeTypes.length > 0) {
+			mimeTypes.sort(function(a, b) { return (a < b) ? -1 : 1; })
+			jam += mimeTypes.toString();
+		}
+		
+		return mod.simpleHash(jam);
+	};
+
+
+	/**
+	 * window.force.modules.helpers.simpleHash()
+	 */
+	mod.simpleHash = function (str) {
+		var hash = 0;
+		if (str.length == 0) {
+			return hash;
+		}
+		for (var i = 0; i < str.length; i++) {
+			c = str.charCodeAt(i);
+			hash = ((hash << 5) - hash) + c;
+			hash = hash & hash;
+		}
+		return hash.toString();
 	};
 
 

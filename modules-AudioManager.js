@@ -326,7 +326,13 @@
 					that._onLoadError();
 				});
 			};
-			request.send();
+			try {
+				request.send();
+			} catch(e) {
+				console.log('AudioEntity.prototype.load: webaudio loading failed, trying switch to audioElement');
+				this.Interface = 'audioElement';
+				this.load();
+			}
 		}
 	};
 

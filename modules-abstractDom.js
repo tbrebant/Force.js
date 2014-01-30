@@ -161,7 +161,7 @@
 		// ---------------------------------------
 
 		var niy = function () {
-			alert('not implemented yet');
+			window.force.modules.helpers.alert('not implemented yet');
 		};
 		for (var e in implementation) {
 			if (implementation[e].mandatory && !mod[e] || typeof mod[e] !== 'function') {

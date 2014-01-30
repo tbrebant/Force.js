@@ -8,6 +8,8 @@
 	 * or just
 	 *   `lazyImageLoader.load(url, cb)` for each image
 	 * each image's load callback is called with one argument: the image object
+	 *
+	 * Rq: The `url` parameter may also be a function, that takes the target image object as parameter; this custom method have to trigger the image's onload method
 	 */
 	
 	var STATUS = {
@@ -72,9 +74,12 @@
 				var i = notLoadedYet[0].index;
 				this._list[i].status = STATUS.LOADING;
 				this._imgLoading.push(i);
+				
 				var img = new Image();
 				img.onload = function() {
-					that._list[i].cb(img);
+					if (that._list[i].cb) {
+						that._list[i].cb(this);
+					}
 					that._list[i].cb = null;
 					that._list[i].status = STATUS.LOADED;
 					that._imgLoading.splice(that._imgLoading.indexOf(i), 1);
@@ -88,7 +93,13 @@
 						}
 					}
 				};
-				img.src = this._list[i].url;
+				
+				if (typeof this._list[i].url === 'string') {
+					img.src = this._list[i].url;
+				} else if (typeof this._list[i].url === 'function') {
+					this._list[i].url(img);
+				}
+
 			} else {
 				var notLoaded = this._list.filter(notLoadedFilter);
 				if (notLoaded.length === 0) {

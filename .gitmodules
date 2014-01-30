@@ -1,0 +1,9 @@
+[submodule "deps/Crypto/sjcl"]
+	path = deps/Crypto/sjcl
+	url = https://github.com/bitwiseshiftleft/sjcl.git
+[submodule "deps/cocoonjsextensions"]
+	path = deps/cocoonjsextensions
+	url = https://bitbucket.org/ludei/cocoon_cocoonjsextensions.git
+[submodule "deps/tween.js"]
+	path = deps/tween.js
+	url = https://github.com/doctb/tween.js.git
