@@ -1,3 +1,4 @@
+//
 Array.prototype.flatten = function () {
 	var toReturn = [];
 	for (var i = 0, len = this.length; i < len; i++) {
@@ -10,6 +11,10 @@ Array.prototype.flatten = function () {
 	return toReturn;
 };
 
+//
+Object.defineProperty(Array.prototype, 'flatten', { enumerable: false });
+
+//
 if (window.Element) {
 	window.Element.prototype.addClassName = function (a) {
 		var classes = this.className.split(' ');
