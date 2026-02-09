@@ -1,9 +1,5 @@
 # Force.js
 
-**A complete HTML5 Canvas game engine built for the pre-WebGL era**
-
-## Overview
-
 **Force.js** was a comprehensive JavaScript game engine developed in 2013, designed to create high-performance 2D games that could run seamlessly across web browsers and native mobile platforms. At a time when WebGL was not widely supported, Force.js provided a robust Canvas 2D rendering solution with the ability to leverage native OpenGL acceleration through third-party wrappers.
 
 ## The Challenge
